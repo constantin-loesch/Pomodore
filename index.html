@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Timer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        body.hide-cursor {
+            cursor: none;
+        }
+        
+        body.hide-cursor * {
+            cursor: none;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .timer-section {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .header {
+            margin-bottom: 60px;
+        }
+
+        .header h1 {
+            font-size: 1.5em;
+            font-weight: 300;
+            letter-spacing: 2px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .mode-indicator {
+            font-size: 0.9em;
+            color: #444;
+            letter-spacing: 2px;
+        }
+
+        /* FlipClock Display */
+        .flip-clock {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 45px;
+            margin: 80px 0;
+        }
+
+        .flip-group {
+            display: flex;
+            gap: 20px;
+        }
+
+        .flip-card {
+            position: relative;
+            width: 180px;
+            height: 240px;
+            perspective: 1000px;
+        }
+
+        .flip-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 50%, #1a1a1a 100%);
+            border-radius: 12px;
+            box-shadow: 
+                0 15px 40px rgba(0,0,0,0.8),
+                inset 0 2px 0 rgba(255,255,255,0.15);
+            z-index: 0;
+        }
+
+        .flip-card::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 100%);
+            z-index: 25;
+            box-shadow: 
+                0 3px 15px rgba(0,0,0,0.9),
+                inset 0 1px 0 rgba(255,255,255,0.05);
+            transform: translateY(-50%);
+        }
+
+        .flip-card-top,
+        .flip-card-bottom {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 50%;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1;
+            border-radius: 12px;
+        }
+
+        .flip-card-top {
+            top: 0;
+            border-radius: 12px 12px 0 0;
+            background: linear-gradient(180deg, #444 0%, #333 100%);
+        }
+
+        .flip-card-bottom {
+            bottom: 0;
+            border-radius: 0 0 12px 12px;
+            background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+        }
+
+        .flip-card-top::after,
+        .flip-card-bottom::after {
+            content: attr(data-value);
+            display: block;
+            font-size: 12em;
+            font-weight: bold;
+            color: #ffffff;
+            line-height: 240px;
+            height: 240px;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+        }
+        
+        .flip-card-top::after {
+            /* Obere Hälfte - Zahl wird so positioniert dass nur obere Hälfte sichtbar ist */
+            margin-bottom: -120px;
+        }
+        
+        .flip-card-bottom::after {
+            /* Untere Hälfte - Zahl wird nach oben verschoben, sodass nur untere Hälfte sichtbar ist */
+            margin-top: -120px;
+        }
+
+        .flip-card-top-flip,
+        .flip-card-bottom-flip {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 50%;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            border-radius: 12px;
+        }
+
+        .flip-card-top-flip {
+            top: 0;
+            transform-origin: bottom;
+            transform: rotateX(0deg);
+            z-index: 20;
+            border-radius: 12px 12px 0 0;
+            background: linear-gradient(180deg, #444 0%, #333 100%);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+        }
+
+        .flip-card-bottom-flip {
+            bottom: 0;
+            transform-origin: top;
+            transform: rotateX(90deg);
+            z-index: 15;
+            border-radius: 0 0 12px 12px;
+            background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+        }
+
+        .flip-card-top-flip::after,
+        .flip-card-bottom-flip::after {
+            content: attr(data-value);
+            display: block;
+            font-size: 12em;
+            font-weight: bold;
+            color: #ffffff;
+            line-height: 240px;
+            height: 240px;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+        }
+        
+        .flip-card-top-flip::after {
+            /* Obere Hälfte - Zahl wird so positioniert dass nur obere Hälfte sichtbar ist */
+            margin-bottom: -120px;
+        }
+        
+        .flip-card-bottom-flip::after {
+            /* Untere Hälfte - Zahl wird nach oben verschoben, sodass nur untere Hälfte sichtbar ist */
+            margin-top: -120px;
+        }
+
+        .flip-card.flipping .flip-card-top-flip {
+            opacity: 1;
+            animation: flipTop 0.25s ease-in forwards;
+        }
+
+        .flip-card.flipping .flip-card-bottom-flip {
+            opacity: 1;
+            animation: flipBottom 0.25s 0.25s ease-out forwards;
+        }
+
+        @keyframes flipTop {
+            0% { transform: rotateX(0deg); }
+            100% { transform: rotateX(-90deg); }
+        }
+
+        @keyframes flipBottom {
+            0% { transform: rotateX(90deg); }
+            100% { transform: rotateX(0deg); }
+        }
+
+        .separator {
+            font-size: 10em;
+            font-weight: 200;
+            color: #333;
+            line-height: 1;
+            margin: 0 15px;
+        }
+
+        /* Controls */
+        .ui-controls {
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
+
+        .ui-controls.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 40px 0 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 32px;
+            font-size: 0.95em;
+            border: 1px solid #222;
+            background: #141414;
+            color: #aaa;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 8px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover {
+            background: #1a1a1a;
+            border-color: #2a2a2a;
+            color: #ddd;
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* Progress */
+        .progress-section {
+            margin: 40px 0;
+        }
+
+        .progress-label {
+            font-size: 0.75em;
+            letter-spacing: 1px;
+            color: #444;
+            margin-bottom: 15px;
+        }
+
+        .progress-circles {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .progress-circle {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #1a1a1a;
+            border: 1px solid #222;
+            transition: all 0.3s;
+        }
+
+        .progress-circle.completed {
+            background: #444;
+            border-color: #555;
+            box-shadow: 0 0 8px rgba(255,255,255,0.1);
+        }
+
+        /* Tasks */
+        .tasks-section {
+            margin-top: 60px;
+            border-top: 1px solid #161616;
+            padding-top: 20px;
+        }
+
+        .tasks-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            cursor: pointer;
+            border-bottom: 1px solid #161616;
+        }
+
+        .tasks-toggle h2 {
+            font-size: 0.9em;
+            font-weight: 400;
+            letter-spacing: 1px;
+            color: #555;
+        }
+
+        .tasks-toggle-icon {
+            font-size: 1em;
+            color: #444;
+            transition: transform 0.3s;
+        }
+
+        .tasks-section.collapsed .tasks-toggle-icon {
+            transform: rotate(-90deg);
+        }
+
+        .tasks-content {
+            max-height: 600px;
+            overflow: hidden;
+            transition: max-height 0.4s ease, opacity 0.4s ease;
+            opacity: 1;
+        }
+
+        .tasks-section.collapsed .tasks-content {
+            max-height: 0;
+            opacity: 0;
+        }
+
+        .task-input-group {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .task-input {
+            flex: 1;
+            padding: 14px;
+            border: 1px solid #161616;
+            background: #0a0a0a;
+            color: #999;
+            font-size: 0.9em;
+            border-radius: 8px;
+        }
+
+        .task-input:focus {
+            outline: none;
+            border-color: #222;
+            background: #111;
+        }
+
+        .btn-add-task {
+            background: #141414;
+            color: #999;
+            padding: 14px 24px;
+            border: 1px solid #222;
+            cursor: pointer;
+            font-size: 0.85em;
+            border-radius: 8px;
+        }
+
+        .btn-add-task:hover {
+            background: #1a1a1a;
+            border-color: #2a2a2a;
+        }
+
+        .tasks-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 0;
+            border-bottom: 1px solid #161616;
+        }
+
+        .task-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            border: 1px solid #222;
+            background: transparent;
+            appearance: none;
+            -webkit-appearance: none;
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .task-checkbox:checked {
+            background: #2a2a2a;
+            border-color: #333;
+        }
+
+        .task-checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            top: -2px;
+            left: 3px;
+            color: #999;
+            font-size: 13px;
+        }
+
+        .task-text {
+            flex: 1;
+            font-size: 0.95em;
+            color: #888;
+        }
+
+        .task-item.completed .task-text {
+            text-decoration: line-through;
+            color: #444;
+        }
+
+        .btn-delete-task {
+            background: none;
+            color: #444;
+            border: 1px solid #161616;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 0.8em;
+            border-radius: 6px;
+        }
+
+        .btn-delete-task:hover {
+            background: #1a1a1a;
+            color: #666;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #0a0a0a;
+            padding: 40px;
+            border: 1px solid #222;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #161616;
+            padding-bottom: 15px;
+        }
+
+        .modal-header h2 {
+            font-size: 1.1em;
+            font-weight: 400;
+            letter-spacing: 1px;
+            color: #666;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            color: #555;
+            font-size: 2em;
+            cursor: pointer;
+            padding: 0;
+            width: 40px;
+            height: 40px;
+            line-height: 1;
+        }
+
+        .btn-close:hover {
+            color: #888;
+        }
+
+        .setting-item {
+            margin-bottom: 25px;
+        }
+
+        .setting-item label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 0.85em;
+            color: #666;
+            letter-spacing: 0.5px;
+        }
+
+        .setting-item input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #161616;
+            border-radius: 8px;
+            background: #000;
+            color: #999;
+            font-size: 1em;
+        }
+
+        .setting-item input:focus {
+            outline: none;
+            border-color: #222;
+        }
+
+        .btn-save {
+            width: 100%;
+            background: #141414;
+            color: #999;
+            padding: 16px;
+            border: 1px solid #222;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-save:hover {
+            background: #1a1a1a;
+            border-color: #2a2a2a;
+        }
+
+        /* Fullscreen */
+        .fullscreen .container {
+            max-width: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        /* Scrollbar */
+        .tasks-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .tasks-list::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+
+        .tasks-list::-webkit-scrollbar-thumb {
+            background: #222;
+            border-radius: 3px;
+        }
+
+        .tasks-list::-webkit-scrollbar-thumb:hover {
+            background: #2a2a2a;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .flip-card {
+                width: 120px;
+                height: 160px;
+            }
+
+            .flip-card-top::after,
+            .flip-card-bottom::after,
+            .flip-card-top-flip::after,
+            .flip-card-bottom-flip::after {
+                font-size: 8em;
+                line-height: 160px;
+                height: 160px;
+            }
+            
+            .flip-card-top::after,
+            .flip-card-top-flip::after {
+                margin-bottom: -80px;
+            }
+            
+            .flip-card-bottom::after,
+            .flip-card-bottom-flip::after {
+                margin-top: -80px;
+            }
+
+            .separator {
+                font-size: 7em;
+            }
+
+            .flip-clock {
+                gap: 35px;
+                margin: 60px 0;
+            }
+            
+            .flip-group {
+                gap: 12px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .flip-card {
+                width: 90px;
+                height: 120px;
+            }
+
+            .flip-card-top::after,
+            .flip-card-bottom::after,
+            .flip-card-top-flip::after,
+            .flip-card-bottom-flip::after {
+                font-size: 6em;
+                line-height: 120px;
+                height: 120px;
+            }
+            
+            .flip-card-top::after,
+            .flip-card-top-flip::after {
+                margin-bottom: -60px;
+            }
+            
+            .flip-card-bottom::after,
+            .flip-card-bottom-flip::after {
+                margin-top: -60px;
+            }
+
+            .separator {
+                font-size: 5em;
+            }
+            
+            .flip-clock {
+                gap: 25px;
+                margin: 40px 0;
+            }
+            
+            .flip-group {
+                gap: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="container">
+        <div class="timer-section">
+            <div class="header">
+                <h1>POMODORO TIMER</h1>
+                <div class="mode-indicator" id="modeIndicator">ARBEITSZEIT</div>
+            </div>
+
+            <div class="flip-clock">
+                <div class="flip-group">
+                    <div class="flip-card" id="min-tens">
+                        <div class="flip-card-top" data-value="2"></div>
+                        <div class="flip-card-bottom" data-value="2"></div>
+                        <div class="flip-card-top-flip" data-value="2"></div>
+                        <div class="flip-card-bottom-flip" data-value="2"></div>
+                    </div>
+                    <div class="flip-card" id="min-ones">
+                        <div class="flip-card-top" data-value="5"></div>
+                        <div class="flip-card-bottom" data-value="5"></div>
+                        <div class="flip-card-top-flip" data-value="5"></div>
+                        <div class="flip-card-bottom-flip" data-value="5"></div>
+                    </div>
+                </div>
+                <div class="separator">:</div>
+                <div class="flip-group">
+                    <div class="flip-card" id="sec-tens">
+                        <div class="flip-card-top" data-value="0"></div>
+                        <div class="flip-card-bottom" data-value="0"></div>
+                        <div class="flip-card-top-flip" data-value="0"></div>
+                        <div class="flip-card-bottom-flip" data-value="0"></div>
+                    </div>
+                    <div class="flip-card" id="sec-ones">
+                        <div class="flip-card-top" data-value="0"></div>
+                        <div class="flip-card-bottom" data-value="0"></div>
+                        <div class="flip-card-top-flip" data-value="0"></div>
+                        <div class="flip-card-bottom-flip" data-value="0"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ui-controls visible" id="uiControls">
+                <div class="controls">
+                    <button class="btn" id="startBtn">Start</button>
+                    <button class="btn" id="pauseBtn" style="display: none;">Pause</button>
+                    <button class="btn" id="resetBtn">Reset</button>
+                    <button class="btn" id="settingsBtn">Einstellungen</button>
+                    <button class="btn" id="fullscreenBtn">Vollbild</button>
+                </div>
+
+                <div class="progress-section">
+                    <div class="progress-label">SESSION</div>
+                    <div class="progress-circles" id="progressCircles">
+                        <div class="progress-circle"></div>
+                        <div class="progress-circle"></div>
+                        <div class="progress-circle"></div>
+                        <div class="progress-circle"></div>
+                    </div>
+                </div>
+
+                <div class="tasks-section" id="tasksSection">
+                    <div class="tasks-toggle" id="tasksToggle">
+                        <h2>AUFGABEN</h2>
+                        <span class="tasks-toggle-icon">▼</span>
+                    </div>
+                    <div class="tasks-content">
+                        <div class="task-input-group">
+                            <input type="text" class="task-input" id="taskInput" placeholder="Neue Aufgabe...">
+                            <button class="btn-add-task" id="addTaskBtn">+</button>
+                        </div>
+                        <div class="tasks-list" id="tasksList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>EINSTELLUNGEN</h2>
+                <button class="btn-close" id="closeModalBtn">&times;</button>
+            </div>
+            <div class="setting-item">
+                <label>Arbeitszeit (Minuten)</label>
+                <input type="number" id="workDuration" value="25" min="1" max="60">
+            </div>
+            <div class="setting-item">
+                <label>Kurze Pause (Minuten)</label>
+                <input type="number" id="shortBreakDuration" value="5" min="1" max="30">
+            </div>
+            <div class="setting-item">
+                <label>Lange Pause (Minuten)</label>
+                <input type="number" id="longBreakDuration" value="15" min="1" max="60">
+            </div>
+            <button class="btn-save" id="saveSettingsBtn">Speichern</button>
+        </div>
+    </div>
+
+    <script>
+        let timerInterval = null;
+        let timeLeft = 25 * 60;
+        let mode = 'work';
+        let sessionsCompleted = 0;
+        let isRunning = false;
+        let tasks = [];
+        let uiTimeout = null;
+        let isInFullscreen = false;
+
+        let settings = {
+            workDuration: 25,
+            shortBreakDuration: 5,
+            longBreakDuration: 15
+        };
+
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const modeIndicator = document.getElementById('modeIndicator');
+        const progressCircles = document.getElementById('progressCircles');
+        const taskInput = document.getElementById('taskInput');
+        const addTaskBtn = document.getElementById('addTaskBtn');
+        const tasksList = document.getElementById('tasksList');
+        const settingsModal = document.getElementById('settingsModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+        const container = document.getElementById('container');
+        const uiControls = document.getElementById('uiControls');
+        const tasksToggle = document.getElementById('tasksToggle');
+        const tasksSection = document.getElementById('tasksSection');
+
+        function loadSettings() {
+            const saved = localStorage.getItem('pomodoroSettings');
+            if (saved) {
+                settings = JSON.parse(saved);
+                document.getElementById('workDuration').value = settings.workDuration;
+                document.getElementById('shortBreakDuration').value = settings.shortBreakDuration;
+                document.getElementById('longBreakDuration').value = settings.longBreakDuration;
+            }
+        }
+
+        function loadTasks() {
+            const saved = localStorage.getItem('pomodoroTasks');
+            if (saved) {
+                tasks = JSON.parse(saved);
+                renderTasks();
+            }
+        }
+
+        function saveTasks() {
+            localStorage.setItem('pomodoroTasks', JSON.stringify(tasks));
+        }
+
+        loadSettings();
+        loadTasks();
+        resetTimer();
+
+        setTimeout(() => {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            
+            setCardValue('min-tens', Math.floor(minutes / 10));
+            setCardValue('min-ones', minutes % 10);
+            setCardValue('sec-tens', Math.floor(seconds / 10));
+            setCardValue('sec-ones', seconds % 10);
+        }, 100);
+        
+        function setCardValue(id, value) {
+            const card = document.getElementById(id);
+            const top = card.querySelector('.flip-card-top');
+            const bottom = card.querySelector('.flip-card-bottom');
+            top.setAttribute('data-value', value);
+            bottom.setAttribute('data-value', value);
+        }
+
+        function showUI() {
+            if (!isInFullscreen) return;
+            
+            uiControls.classList.add('visible');
+            document.body.classList.remove('hide-cursor');
+            
+            clearTimeout(uiTimeout);
+            uiTimeout = setTimeout(() => {
+                if (isRunning && isInFullscreen && !settingsModal.classList.contains('active')) {
+                    uiControls.classList.remove('visible');
+                    document.body.classList.add('hide-cursor');
+                }
+            }, 3000);
+        }
+
+        function hideUI() {
+            if (isRunning && isInFullscreen && !settingsModal.classList.contains('active')) {
+                uiControls.classList.remove('visible');
+                document.body.classList.add('hide-cursor');
+            }
+        }
+
+        document.addEventListener('mousemove', showUI);
+        document.addEventListener('click', showUI);
+
+        function startTimer() {
+            if (isRunning) return;
+            isRunning = true;
+            startBtn.style.display = 'none';
+            pauseBtn.style.display = 'inline-block';
+            
+            if (isInFullscreen) {
+                setTimeout(hideUI, 3000);
+            }
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateDisplay();
+                
+                if (timeLeft <= 0) {
+                    timerComplete();
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            isRunning = false;
+            clearInterval(timerInterval);
+            startBtn.style.display = 'inline-block';
+            pauseBtn.style.display = 'none';
+            showUI();
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            if (mode === 'work') {
+                timeLeft = settings.workDuration * 60;
+            } else if (mode === 'shortBreak') {
+                timeLeft = settings.shortBreakDuration * 60;
+            } else {
+                timeLeft = settings.longBreakDuration * 60;
+            }
+            updateDisplay();
+        }
+
+        function timerComplete() {
+            pauseTimer();
+            playSound();
+            
+            if (mode === 'work') {
+                sessionsCompleted++;
+                updateProgress();
+                
+                if (sessionsCompleted % 4 === 0) {
+                    mode = 'longBreak';
+                    timeLeft = settings.longBreakDuration * 60;
+                } else {
+                    mode = 'shortBreak';
+                    timeLeft = settings.shortBreakDuration * 60;
+                }
+            } else {
+                mode = 'work';
+                timeLeft = settings.workDuration * 60;
+            }
+            
+            updateModeIndicator();
+            updateDisplay();
+            
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('Pomodoro Timer', {
+                    body: mode === 'work' ? 'Pause beendet! Zeit zu arbeiten.' : 'Arbeitszeit beendet! Zeit für eine Pause.'
+                });
+            }
+        }
+
+        function updateDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            
+            const minTens = Math.floor(minutes / 10);
+            const minOnes = minutes % 10;
+            const secTens = Math.floor(seconds / 10);
+            const secOnes = seconds % 10;
+            
+            flipCard('min-tens', minTens);
+            flipCard('min-ones', minOnes);
+            flipCard('sec-tens', secTens);
+            flipCard('sec-ones', secOnes);
+        }
+
+        function flipCard(id, value) {
+            const card = document.getElementById(id);
+            const top = card.querySelector('.flip-card-top');
+            const bottom = card.querySelector('.flip-card-bottom');
+            const topFlip = card.querySelector('.flip-card-top-flip');
+            const bottomFlip = card.querySelector('.flip-card-bottom-flip');
+            
+            const currentValue = parseInt(top.getAttribute('data-value'));
+            
+            if (currentValue !== value) {
+                if (card.classList.contains('flipping')) {
+                    return;
+                }
+                
+                // Setze die obere statische Hälfte SOFORT auf die neue Zahl
+                // Sie wird von der oberen Flip-Hälfte verdeckt, bis diese wegklappt
+                top.setAttribute('data-value', value);
+                
+                // Setze die Flip-Elemente
+                topFlip.setAttribute('data-value', currentValue); // alte Zahl klappt weg
+                bottomFlip.setAttribute('data-value', value);      // neue Zahl klappt rein
+                
+                // Starte die Animation
+                card.classList.add('flipping');
+                
+                // Aktualisiere die untere statische Hälfte bei 250ms 
+                // (wenn die obere Flip-Hälfte komplett weg ist)
+                setTimeout(() => {
+                    bottom.setAttribute('data-value', value);
+                }, 250);
+                
+                // Entferne die flipping-Klasse am Ende
+                setTimeout(() => {
+                    card.classList.remove('flipping');
+                }, 500);
+            }
+        }
+
+        function updateModeIndicator() {
+            if (mode === 'work') {
+                modeIndicator.textContent = 'ARBEITSZEIT';
+            } else if (mode === 'shortBreak') {
+                modeIndicator.textContent = 'KURZE PAUSE';
+            } else {
+                modeIndicator.textContent = 'LANGE PAUSE';
+            }
+        }
+
+        function updateProgress() {
+            const circles = progressCircles.querySelectorAll('.progress-circle');
+            circles.forEach((circle, index) => {
+                if (index < sessionsCompleted % 4) {
+                    circle.classList.add('completed');
+                } else {
+                    circle.classList.remove('completed');
+                }
+            });
+        }
+
+        function playSound() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 600;
+            oscillator.type = 'square';
+            
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
+        }
+
+        function addTask() {
+            const text = taskInput.value.trim();
+            if (text) {
+                tasks.push({
+                    id: Date.now(),
+                    text: text,
+                    completed: false
+                });
+                taskInput.value = '';
+                saveTasks();
+                renderTasks();
+            }
+        }
+
+        function toggleTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                saveTasks();
+                renderTasks();
+            }
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            saveTasks();
+            renderTasks();
+        }
+
+        function renderTasks() {
+            if (tasks.length === 0) {
+                tasksList.innerHTML = '<div style="text-align: center; color: #333; padding: 20px; font-size: 0.85em;">Keine Aufgaben</div>';
+                return;
+            }
+            
+            tasksList.innerHTML = tasks.map(task => `
+                <div class="task-item ${task.completed ? 'completed' : ''}">
+                    <input type="checkbox" class="task-checkbox" 
+                           ${task.completed ? 'checked' : ''} 
+                           onchange="toggleTask(${task.id})">
+                    <div class="task-text">${task.text}</div>
+                    <button class="btn-delete-task" onclick="deleteTask(${task.id})">×</button>
+                </div>
+            `).join('');
+        }
+
+        tasksToggle.addEventListener('click', () => {
+            tasksSection.classList.toggle('collapsed');
+            localStorage.setItem('tasksCollapsed', tasksSection.classList.contains('collapsed'));
+        });
+
+        if (localStorage.getItem('tasksCollapsed') === 'true') {
+            tasksSection.classList.add('collapsed');
+        }
+
+        function openSettings() {
+            settingsModal.classList.add('active');
+            clearTimeout(uiTimeout);
+            uiControls.classList.add('visible');
+            document.body.classList.remove('hide-cursor');
+        }
+
+        function closeSettings() {
+            settingsModal.classList.remove('active');
+            if (isRunning && isInFullscreen) {
+                showUI();
+            }
+        }
+
+        function saveSettings() {
+            settings.workDuration = parseInt(document.getElementById('workDuration').value);
+            settings.shortBreakDuration = parseInt(document.getElementById('shortBreakDuration').value);
+            settings.longBreakDuration = parseInt(document.getElementById('longBreakDuration').value);
+            
+            localStorage.setItem('pomodoroSettings', JSON.stringify(settings));
+            closeSettings();
+            resetTimer();
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log('Fullscreen error:', err);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        startBtn.addEventListener('click', startTimer);
+        pauseBtn.addEventListener('click', pauseTimer);
+        resetBtn.addEventListener('click', resetTimer);
+        settingsBtn.addEventListener('click', openSettings);
+        closeModalBtn.addEventListener('click', closeSettings);
+        saveSettingsBtn.addEventListener('click', saveSettings);
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
+        addTaskBtn.addEventListener('click', addTask);
+        
+        taskInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addTask();
+            }
+        });
+
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) {
+                closeSettings();
+            }
+        });
+
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) {
+                isInFullscreen = true;
+                container.classList.add('fullscreen');
+                fullscreenBtn.textContent = 'Beenden';
+                if (isRunning) {
+                    setTimeout(hideUI, 3000);
+                }
+            } else {
+                isInFullscreen = false;
+                container.classList.remove('fullscreen');
+                fullscreenBtn.textContent = 'Vollbild';
+                uiControls.classList.add('visible');
+                document.body.classList.remove('hide-cursor');
+                clearTimeout(uiTimeout);
+            }
+        });
+
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    </script>
+</body>
+</html>
